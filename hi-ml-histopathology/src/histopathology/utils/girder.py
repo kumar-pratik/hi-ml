@@ -78,11 +78,13 @@ class Rectangle(Element):
         data["lineColor"] = str(self.line_color)
         data["type"] = "rectangle"
         data["center"] = list(astuple(self.center))
+        data["center"].append(0)  # the 3rd dimension is enforced by the JSON schema
         data["width"] = self.width
         data["height"] = self.height
         return data
 
 
+@dataclass
 class Annotation:
     elements: Optional[List[Element]] = None
     name: str = ""
