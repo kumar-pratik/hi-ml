@@ -99,13 +99,17 @@ class Annotation:
 
 
 class DigitalSlideArchive:
-    def __init__(self):
-        self._client = self._get_client()
+    def __init__(
+            self,
+            api_url: Optional[str] = None,
+            api_key: Optional[str] = None,
+            ):
+        self._client = self._get_client(api_url, api_key)
 
     @staticmethod
-    def _get_client() -> GirderClient:
-        client = GirderClient(apiUrl=os.environ["GIRDER_API_URL"])
-        client.authenticate(apiKey=os.environ["GIRDER_API_KEY"])
+    def _get_client(api_url: Optional[str], api_key: Optional[str]) -> GirderClient:
+        client = GirderClient(apiUrl=os.environ["GIRDER_API_URL"] if api_url is None else api_url)
+        client.authenticate(apiKey=os.environ["GIRDER_API_KEY"] if api_key is None else api_key)
         return client
 
     def add_annotation(self, item_id: str, annotation: Annotation):
