@@ -36,6 +36,11 @@ class BaseMIL(LightningContainer):
     n_channels: int = param.Integer(3, bounds=(1, None), doc="Number of channels in the tile.")
 
     # Data module parameters:
+    dataset_csv: Path = param.String(
+        None,
+        doc=" Full path to a dataset CSV file, containing at least `TILE_ID_COLUMN`, `SLIDE_ID_COLUMN`, "
+        "and `IMAGE_COLUMN`. Default to None in which case the CSV will be read from {root}/{DEFAULT_CSV_FILENAME}",
+    )
     batch_size: int = param.Integer(16, bounds=(1, None), doc="Number of slides to load per batch.")
     max_bag_size: int = param.Integer(1000, bounds=(0, None),
                                       doc="Upper bound on number of tiles in each loaded bag. "
@@ -69,8 +74,9 @@ class BaseMIL(LightningContainer):
 
     def get_encoder(self) -> TileEncoder:
         if self.encoder_type == ImageNetEncoder.__name__:
-            return ImageNetEncoder(feature_extraction_model=resnet18,
-                                   tile_size=self.tile_size, n_channels=self.n_channels)
+            return ImageNetEncoder(
+                feature_extraction_model=resnet18, tile_size=self.tile_size, n_channels=self.n_channels
+            )
 
         elif self.encoder_type == ImageNetSimCLREncoder.__name__:
             return ImageNetSimCLREncoder(tile_size=self.tile_size, n_channels=self.n_channels)
@@ -79,8 +85,11 @@ class BaseMIL(LightningContainer):
             return HistoSSLEncoder(tile_size=self.tile_size, n_channels=self.n_channels)
 
         elif self.encoder_type == SSLEncoder.__name__:
-            return SSLEncoder(pl_checkpoint_path=self.downloader.local_checkpoint_path,
-                              tile_size=self.tile_size, n_channels=self.n_channels)
+            return SSLEncoder(
+                pl_checkpoint_path=self.downloader.local_checkpoint_path,
+                tile_size=self.tile_size,
+                n_channels=self.n_channels,
+            )
 
         else:
             raise ValueError(f"Unsupported encoder type: {self.encoder_type}")
@@ -97,14 +106,16 @@ class BaseMIL(LightningContainer):
         self.data_module = self.get_data_module()
         # Encoding is done in the datamodule, so here we provide instead a dummy
         # no-op IdentityEncoder to be used inside the model
-        return DeepMILModule(encoder=IdentityEncoder(input_dim=(self.encoder.num_encoding,)),
-                             label_column=self.data_module.train_dataset.LABEL_COLUMN,
-                             n_classes=self.data_module.train_dataset.N_CLASSES,
-                             pooling_layer=self.get_pooling_layer(),
-                             class_weights=self.data_module.class_weights,
-                             l_rate=self.l_rate,
-                             weight_decay=self.weight_decay,
-                             adam_betas=self.adam_betas)
+        return DeepMILModule(
+            encoder=IdentityEncoder(input_dim=(self.encoder.num_encoding,)),
+            label_column=self.data_module.train_dataset.LABEL_COLUMN,
+            n_classes=self.data_module.train_dataset.N_CLASSES,
+            pooling_layer=self.get_pooling_layer(),
+            class_weights=self.data_module.class_weights,
+            l_rate=self.l_rate,
+            weight_decay=self.weight_decay,
+            adam_betas=self.adam_betas,
+        )
 
     def get_data_module(self) -> TilesDataModule:
         raise NotImplementedError

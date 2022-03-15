@@ -121,6 +121,7 @@ class DeepSMILEPanda(BaseMIL):
             root_path=self.local_datasets[0],
             max_bag_size=self.max_bag_size,
             batch_size=self.batch_size,
+            dataset_csv=self.dataset_csv,
             transform=transform,
             cache_mode=self.cache_mode,
             precache_location=self.precache_location,
@@ -207,3 +208,9 @@ class PandaSSLMIL(DeepSMILEPanda):
 class PandaHistoSSLMIL(DeepSMILEPanda):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(encoder_type=HistoSSLEncoder.__name__, **kwargs)
+
+
+class DeepSMILEPanda20(DeepSMILEPanda):
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(encoder_type=HistoSSLEncoder.__name__, **kwargs)
+        self.dataset_csv = "custom_subset/panda/dataset_20.csv"

@@ -20,7 +20,9 @@ class PandaTilesDataModule(TilesDataModule):
         super().__init__(**kwargs)
 
     def get_splits(self) -> Tuple[PandaTilesDataset, PandaTilesDataset, PandaTilesDataset]:
-        dataset = PandaTilesDataset(self.root_path)
+        if self.dataset_csv:
+            print(f"Using custom dataset csv {self.dataset_csv}")
+        dataset = PandaTilesDataset(self.root_path, self.dataset_csv)
         splits = DatasetSplits.from_proportions(dataset.dataset_df.reset_index(),
                                                 proportion_train=.8,
                                                 proportion_test=.1,
