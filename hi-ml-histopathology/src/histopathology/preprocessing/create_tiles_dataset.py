@@ -236,6 +236,33 @@ def merge_dataset_csv_files(dataset_dir: Path) -> Path:
     return full_csv
 
 
+def save_tile(sample: dict, image_tile: np.ndarray, mask_tile: np.ndarray,
+              tile_location: Sequence[int], output_dir: Path) -> dict:
+    # TODO refactor this to separate metadata identification from saving. We might want the metadata
+    # even if the saving fails
+    slide_id = sample['image_id']
+    descriptor = get_tile_descriptor(tile_location)
+    image_tile_filename = f"train_images/{descriptor}.png"
+    mask_tile_filename = f"train_label_masks/{descriptor}_mask.png"
+
+    save_image(image_tile, output_dir / image_tile_filename)
+    save_image(mask_tile, output_dir / mask_tile_filename)
+
+    tile_metadata = {
+        'slide_id': slide_id,
+        'tile_id': get_tile_id(slide_id, tile_location),
+        'image': image_tile_filename,
+        'mask': mask_tile_filename,
+        'tile_x': tile_location[0],
+        'tile_y': tile_location[1],
+        'data_provider': sample['data_provider'],
+        'slide_isup_grade': sample['isup_grade'],
+        'slide_gleason_score': sample['gleason_score'],
+    }
+
+    return tile_metadata
+
+
 def main(slides_dataset: SlidesDataset, root_output_dir: Union[str, Path],
          level: int, tile_size: int, margin: int, foreground_threshold: Optional[float],
          occupancy_threshold: float, parallel: bool = False, overwrite: bool = False,
@@ -304,3 +331,4 @@ if __name__ == '__main__':
          occupancy_threshold=0.05,
          parallel=False,
          overwrite=True)
+

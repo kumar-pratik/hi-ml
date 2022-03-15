@@ -12,10 +12,9 @@ from health_azure.utils import WORKSPACE_CONFIG_JSON
 
 
 # A compute instance, with a GPU, required for running cuCIM.
-GPU_TESTING_INSTANCE_NAME = "testing-standard-nc6"
+GPU_TESTING_INSTANCE_NAME = "training-nd24"
 
 here = Path(__file__).parent.resolve()
-
 workspace = get_workspace(aml_workspace=None,
                           workspace_config_path=here / WORKSPACE_CONFIG_JSON)
 
@@ -25,7 +24,8 @@ environment = Environment.from_dockerfile(name='image_load_env',
 
 compute_target = ComputeTarget(workspace=workspace, name=GPU_TESTING_INSTANCE_NAME)
 
-config = ScriptRunConfig(source_directory='./src',
+config = ScriptRunConfig(source_directory='hi-ml/testhiml/testhiml/utils/'
+                         'slide_image_loading/src',
                          script='profile_load_image.py',
                          compute_target=compute_target,
                          environment=environment)
