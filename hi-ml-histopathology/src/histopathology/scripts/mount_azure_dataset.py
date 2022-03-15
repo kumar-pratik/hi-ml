@@ -9,7 +9,7 @@ from health_azure.utils import get_workspace
 
 def mount_dataset(dataset_id: str) -> str:
     ws = get_workspace()
-    target_folder = "/tmp/datasets/"
+    target_folder = f"/tmp/datasets/{dataset_id}"
     dataset = DatasetConfig(name=dataset_id, target_folder=target_folder, use_mounting=True)
     dataset_mount_folder, mount_ctx = dataset.to_input_dataset_local(ws)
     mount_ctx.start()
