@@ -36,11 +36,6 @@ class BaseMIL(LightningContainer):
     n_channels: int = param.Integer(3, bounds=(1, None), doc="Number of channels in the tile.")
 
     # Data module parameters:
-    dataset_csv: Path = param.String(
-        None,
-        doc=" Full path to a dataset CSV file, containing at least `TILE_ID_COLUMN`, `SLIDE_ID_COLUMN`, "
-        "and `IMAGE_COLUMN`. Default to None in which case the CSV will be read from {root}/{DEFAULT_CSV_FILENAME}",
-    )
     batch_size: int = param.Integer(16, bounds=(1, None), doc="Number of slides to load per batch.")
     max_bag_size: int = param.Integer(1000, bounds=(0, None),
                                       doc="Upper bound on number of tiles in each loaded bag. "

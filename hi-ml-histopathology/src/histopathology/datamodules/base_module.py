@@ -35,7 +35,6 @@ class TilesDataModule(LightningDataModule):
     """Base class to load the tiles of a dataset as train, val, test sets"""
 
     def __init__(self, root_path: Path, max_bag_size: int = 0, batch_size: int = 1,
-                 dataset_csv: Optional[Union[str, Path]] = None,
                  seed: Optional[int] = None, transform: Optional[Callable] = None,
                  cache_mode: CacheMode = CacheMode.NONE,
                  precache_location: CacheLocation = CacheLocation.NONE,
@@ -48,9 +47,6 @@ class TilesDataModule(LightningDataModule):
         will return all samples in each bag. If > 0 , bags larger than `max_bag_size` will yield
         random subsets of instances.
         :param batch_size: Number of slides to load per batch.
-        :param dataset_csv: Full path to a dataset CSV file, containing at least
-        `TILE_ID_COLUMN`, `SLIDE_ID_COLUMN`, and `IMAGE_COLUMN`. If omitted, the CSV will be read
-        from `"{root}/{DEFAULT_CSV_FILENAME}"`.
         :param seed: pseudorandom number generator seed to use for shuffling instances and bags. Note that randomness in
         train/val/test splits is handled independently in `get_splits()`. (default: `None`)
         :param transform: A transform to apply to the source tiles dataset, or a composition of
@@ -83,7 +79,6 @@ class TilesDataModule(LightningDataModule):
         super().__init__()
 
         self.root_path = root_path
-        self.dataset_csv = dataset_csv
         self.max_bag_size = max_bag_size
         self.transform = transform
         self.cache_mode = cache_mode

@@ -3,7 +3,8 @@
 #  Licensed under the MIT License (MIT). See LICENSE in the repo root for license information.
 #  ------------------------------------------------------------------------------------------
 
-from typing import Any, Tuple
+from pathlib import Path
+from typing import Any, Tuple, Union
 
 from health_ml.utils.split_dataset import DatasetSplits
 
@@ -20,15 +21,36 @@ class PandaTilesDataModule(TilesDataModule):
         super().__init__(**kwargs)
 
     def get_splits(self) -> Tuple[PandaTilesDataset, PandaTilesDataset, PandaTilesDataset]:
-        if self.dataset_csv:
-            print(f"Using custom dataset csv {self.dataset_csv}")
-        dataset = PandaTilesDataset(self.root_path, self.dataset_csv)
-        splits = DatasetSplits.from_proportions(dataset.dataset_df.reset_index(),
-                                                proportion_train=.8,
-                                                proportion_test=.1,
-                                                proportion_val=.1,
-                                                subject_column=dataset.TILE_ID_COLUMN,
-                                                group_column=dataset.SLIDE_ID_COLUMN)
-        return (PandaTilesDataset(self.root_path, dataset_df=splits.train),
-                PandaTilesDataset(self.root_path, dataset_df=splits.val),
-                PandaTilesDataset(self.root_path, dataset_df=splits.test))
+        dataset = PandaTilesDataset(self.root_path)
+        splits = DatasetSplits.from_proportions(
+            dataset.dataset_df.reset_index(),
+            proportion_train=0.8,
+            proportion_test=0.1,
+            proportion_val=0.1,
+            subject_column=dataset.TILE_ID_COLUMN,
+            group_column=dataset.SLIDE_ID_COLUMN,
+        )
+        return (
+            PandaTilesDataset(self.root_path, dataset_df=splits.train),
+            PandaTilesDataset(self.root_path, dataset_df=splits.val),
+            PandaTilesDataset(self.root_path, dataset_df=splits.test),
+        )
+
+
+class SubPandaTilesDataModule(TilesDataModule):
+    """ subPandaTilesDataModule is the child class of PandaDataModule specific to PANDA dataset
+    Method get_splits() returns the train, val, test splits from a subset of the PANDA dataset specified by
+    train/validation dataframes
+    """
+
+    def __init__(self, train_csv: Union[str, Path], val_csv: Union[str, Path], **kwargs: Any) -> None:
+        self.train_csv = train_csv
+        self.val_csv = val_csv
+        super().__init__(**kwargs)
+
+    def get_splits(self) -> Tuple[PandaTilesDataset, PandaTilesDataset, PandaTilesDataset]:
+        return (
+            PandaTilesDataset(self.root_path, self.train_csv),
+            PandaTilesDataset(self.root_path, self.val_csv),
+            PandaTilesDataset(self.root_path, self.val_csv),
+        )
