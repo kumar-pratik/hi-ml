@@ -177,8 +177,7 @@ class DigitalSlideArchive:
 def get_annotation_from_slide_data_frame(
         df: pd.DataFrame,
         name: str,
-        *,
-        rescale: bool,
+        rescale: bool = False,
         colormap_name: str = 'Greens',
         description: str = '',
 ) -> Annotation:
