@@ -4,10 +4,13 @@
 #  ------------------------------------------------------------------------------------------
 
 import os
+from pathlib import Path
 from dataclasses import dataclass, astuple, asdict
-from typing import Dict, List, Optional, Sequence, Union
+from typing import Any, Dict, List, Optional, Sequence, Union
 
 import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
 from girder_client import GirderClient
 
 
@@ -122,21 +125,19 @@ class Point(Element):
 @dataclass
 class Annotation:
     name: str
-    elements: Optional[List[Element]] = None
+    elements: Sequence[Element]
     description: str = ""
 
     def __post_init__(self) -> None:
         if not self.name:
             # This is enforced by the JSON schema
             raise ValueError('The annotation name cannot be empty')
-        if self.elements is None:
-            self.elements = []
 
     def as_json(self) -> TypeAnnotationJSON:
         data: TypeAnnotationJSON = {}
         data["name"] = self.name
         data["description"] = self.description
-        data["elements"] = [element.as_json() for element in self.elements]
+        data["elements"] = [element.as_json() for element in self.elements]  # type: ignore
         return data
 
 
@@ -171,3 +172,51 @@ class DigitalSlideArchive:
         assert matches, f'File {file_name} not found in folder {folder_name}'
         assert len(matches) == 1
         return matches[0]['_id']
+
+
+def get_annotation_from_slide_data_frame(
+        df: pd.DataFrame,
+        name: str,
+        *,
+        rescale: bool,
+        colormap_name: str = 'Greens',
+        description: str = '',
+) -> Annotation:
+    # TODO: take padding offset into account?
+    def find_tile_size(x: np.ndarray) -> int:
+        return np.diff(np.sort(x)).max()
+    tile_width = find_tile_size(df.x)
+    tile_height = find_tile_size(df.y)
+    original_attentions = df.bag_attn.values
+    if rescale:
+        df = df.copy()
+        attentions = df.bag_attn.values
+        df.bag_attn = (attentions - attentions.min()) / np.ptp(attentions)
+    colormap = plt.get_cmap(colormap_name)
+    rectangles = []
+    for i, (_, row) in enumerate(df.iterrows()):
+        rgba_uchar = colormap(row.bag_attn, bytes=True)
+        fill_color = Color(*rgba_uchar)
+        line_color = Transparent()
+        top_left = Coordinates(row.x, row.y)
+        rectangle = Rectangle(
+            f'{original_attentions[i]:.4f}',
+            fill_color,
+            line_color,
+            top_left,
+            tile_width,
+            tile_height,
+        )
+        rectangles.append(rectangle)
+    return Annotation(name, rectangles, description=description)
+
+
+def get_slide_annotation_from_csv(
+        csv_path: Path,
+        slide_id: str,
+        annotation_name: str,
+        **kwargs: Any,
+) -> Annotation:
+    df = pd.read_csv(csv_path, index_col=0)
+    df_slide = df[df.slide_id == slide_id]
+    return get_annotation_from_slide_data_frame(df_slide, annotation_name, **kwargs)
