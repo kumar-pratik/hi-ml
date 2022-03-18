@@ -217,7 +217,7 @@ class PandaHistoSSLMIL(DeepSMILEPanda):
         super().__init__(encoder_type=HistoSSLEncoder.__name__, **kwargs)
 
 
-class SubPandaSSLMIL(PandaImageNetMIL):
+class SubPandaSSLMIL(PandaSSLMIL):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         root = "~/workspace/hi-ml/hi-ml-histopathology/src/histopathology/configs/classification"
