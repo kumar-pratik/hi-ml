@@ -24,7 +24,7 @@ from histopathology.models.encoders import (
     ImageNetEncoder,
     ImageNetSimCLREncoder,
     SSLEncoder,
-    IdentityEncoder,
+    IdentityEncoder
 )
 from histopathology.models.transforms import (
     EncodeTilesBatchd,
@@ -56,24 +56,27 @@ class DeepSMILEPanda(BaseMIL):
             # declared in DatasetParams:
             local_datasets=[Path("/tmp/datasets/PANDA_tiles"), Path("/tmp/datasets/PANDA")],
             azure_datasets=["PANDA_tiles", "PANDA"],
-            # To mount the dataset instead of downloading in AML, pass --use_dataset_mount in the val_csv
-            # declared in valerParams:
+            # To mount the dataset instead of downloading in AML, pass --use_dataset_mount in the CLI
+            # declared in TrainerParams:
             max_epochs=200,
             # use_mixed_precision = True,
+
             # declared in WorkflowParams:
-            crossval_count=5,
+            crossval_count=1,
             crossval_index=0,
+
             # declared in OptimizerParams:
             l_rate=5e-4,
             weight_decay=1e-4,
-            adam_betas=(0.9, 0.99),
-        )
+            adam_betas=(0.9, 0.99))
         default_kwargs.update(kwargs)
         super().__init__(**default_kwargs)
         if not is_running_in_azure_ml():
             self.num_epochs = 1
         self.best_checkpoint_filename = "checkpoint_max_val_auroc"
-        self.best_checkpoint_filename_with_suffix = self.best_checkpoint_filename + ".ckpt"
+        self.best_checkpoint_filename_with_suffix = (
+            self.best_checkpoint_filename + ".ckpt"
+        )
         self.checkpoint_folder_path = "outputs/checkpoints/"
         best_checkpoint_callback = ModelCheckpoint(
             dirpath=self.checkpoint_folder_path,
@@ -86,18 +89,20 @@ class DeepSMILEPanda(BaseMIL):
 
     @property
     def cache_dir(self) -> Path:
-        return Path(f"/tmp/innereye_cache1/{self.__class__.__name__}-{self.encoder_type}/")
+        return Path(
+            f"/tmp/innereye_cache1/{self.__class__.__name__}-{self.encoder_type}/"
+        )
 
     def setup(self) -> None:
+        print("self.encoder_type", self.encoder_type)
         if self.encoder_type == SSLEncoder.__name__:
             from histopathology.configs.run_ids import innereye_ssl_checkpoint_binary
-
             self.downloader = CheckpointDownloader(
                 aml_workspace=get_workspace(),
                 run_id=innereye_ssl_checkpoint_binary,  # innereye_ssl_checkpoint
                 checkpoint_filename="best_checkpoint.ckpt",  # "last.ckpt",
                 download_dir="outputs/",
-                remote_checkpoint_dir=Path("outputs/checkpoints"),
+                remote_checkpoint_dir=Path("outputs/checkpoints")
             )
             os.chdir(fixed_paths.repository_root_directory().parent)
             self.downloader.download_checkpoint_if_necessary()
@@ -110,12 +115,10 @@ class DeepSMILEPanda(BaseMIL):
         if self.is_finetune:
             transform = Compose([LoadTilesBatchd(image_key, progress=True)])
         else:
-            transform = Compose(
-                [
-                    LoadTilesBatchd(image_key, progress=True),
-                    EncodeTilesBatchd(image_key, self.encoder, chunk_size=self.encoding_chunk_size),
-                ]
-            )
+            transform = Compose([
+                                LoadTilesBatchd(image_key, progress=True),
+                                EncodeTilesBatchd(image_key, self.encoder, chunk_size=self.encoding_chunk_size)
+                                ])
 
         return PandaTilesDataModule(
             root_path=self.local_datasets[0],
@@ -143,23 +146,27 @@ class DeepSMILEPanda(BaseMIL):
                 params.requires_grad = True
         else:
             self.model_encoder = IdentityEncoder(input_dim=(self.encoder.num_encoding,))
-        return DeepMILModule(
-            encoder=self.model_encoder,
-            label_column=self.data_module.train_dataset.LABEL_COLUMN,
-            n_classes=self.data_module.train_dataset.N_CLASSES,
-            pooling_layer=self.get_pooling_layer(),
-            class_weights=self.data_module.class_weights,
-            l_rate=self.l_rate,
-            weight_decay=self.weight_decay,
-            adam_betas=self.adam_betas,
-            slide_dataset=self.get_slide_dataset(),
-            tile_size=self.tile_size,
-            level=self.level,
-            class_names=self.class_names
-        )
+        
+        # Construct pooling layer
+        pooling_layer, num_features = self.get_pooling_layer()
+
+        return DeepMILModule(encoder=self.model_encoder,
+                             label_column=self.data_module.train_dataset.LABEL_COLUMN,
+                             n_classes=self.data_module.train_dataset.N_CLASSES,
+                             pooling_layer=pooling_layer,
+                             num_features=num_features,
+                             class_weights=self.data_module.class_weights,
+                             l_rate=self.l_rate,
+                             weight_decay=self.weight_decay,
+                             adam_betas=self.adam_betas,
+                             slide_dataset=self.get_slide_dataset(),
+                             tile_size=self.tile_size,
+                             level=self.level,
+                             class_names=self.class_names,
+                             is_finetune=self.is_finetune)
 
     def get_slide_dataset(self) -> PandaDataset:
-        return PandaDataset(root=self.local_datasets[1])  # type: ignore
+        return PandaDataset(root=self.local_datasets[1])                             # type: ignore
 
     def get_callbacks(self) -> List[Callback]:
         return super().get_callbacks() + [self.callbacks]
@@ -171,19 +178,15 @@ class DeepSMILEPanda(BaseMIL):
         folder.
         """
         # absolute path is required for registering the model.
-        absolute_checkpoint_path = Path(
-            fixed_paths.repository_root_directory(),
-            self.checkpoint_folder_path,
-            self.best_checkpoint_filename_with_suffix,
-        )
+        absolute_checkpoint_path = Path(fixed_paths.repository_root_directory(),
+                                        self.checkpoint_folder_path,
+                                        self.best_checkpoint_filename_with_suffix)
         if absolute_checkpoint_path.is_file():
             return absolute_checkpoint_path
 
-        absolute_checkpoint_path_parent = Path(
-            fixed_paths.repository_root_directory().parent,
-            self.checkpoint_folder_path,
-            self.best_checkpoint_filename_with_suffix,
-        )
+        absolute_checkpoint_path_parent = Path(fixed_paths.repository_root_directory().parent,
+                                               self.checkpoint_folder_path,
+                                               self.best_checkpoint_filename_with_suffix)
         if absolute_checkpoint_path_parent.is_file():
             return absolute_checkpoint_path_parent
 
@@ -214,13 +217,13 @@ class PandaHistoSSLMIL(DeepSMILEPanda):
         super().__init__(encoder_type=HistoSSLEncoder.__name__, **kwargs)
 
 
-class DeepSMILESubPanda(DeepSMILEPanda):
+class SubPandaSSLMIL(PandaImageNetMIL):
     def __init__(self, **kwargs: Any) -> None:
-        super().__init__(encoder_type=HistoSSLEncoder.__name__, **kwargs)
-        print("CWD", os.getcwd())
+        super().__init__(**kwargs)
+        root = "~/workspace/hi-ml/hi-ml-histopathology/src/histopathology/configs/classification"
         self.crossval_count = 1
-        self.train_csv = "~/workspace/hi-ml/hi-ml-histopathology/src/histopathology/configs/classification/custom_subset/panda/train_20.csv"
-        self.val_csv = "~/workspace/hi-ml/hi-ml-histopathology/src/histopathology/configs/classification/custom_subset/panda/val_20.csv"
+        self.train_csv = os.path.join(root, "custom_subset/panda/train_20.csv")
+        self.val_csv = os.path.join(root, "custom_subset/panda/val_20.csv")
 
     def get_data_module(self) -> SubPandaTilesDataModule:
         image_key = PandaTilesDataset.IMAGE_COLUMN
